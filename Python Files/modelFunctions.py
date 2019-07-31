@@ -36,11 +36,13 @@ def createSeqentialModel():
     NoOfUsedInputSamples = 300;     #No of Samples per Channel used as Input for the Network
     NoOfOutputSamples = 300;        #No of Sampels used for Output Signal
     
-    x_in=tf.placeholder(tf.float32, [None,NoOfUsedInputSamples,NoOfUsedInputChannels]) #Define Input Data Structure
-    y_outR=tf.placeholder(tf.float32, [None,NoOfOutputSamples]) #Define Output Data Structure for Respiration
-    y_outH=tf.placeholder(tf.float32, [None,NoOfOutputSamples]) #Define Output Data Structure for Hertbeat
+    x_in=tf.placeholder(tf.float32, [None,NoOfUsedInputSamples,NoOfUsedInputChannels]) #Define Input Data Structure [batchSize, inputDim1, inputDim2]
+    y_outR=tf.placeholder(tf.float32, [None,NoOfOutputSamples,1]) #Define Output Data Structure for Respiration [batchSize, inputDim1, inputDim2]
+    y_outH=tf.placeholder(tf.float32, [None,NoOfOutputSamples,1]) #Define Output Data Structure for Hertbeat [batchSize, inputDim1, inputDim2]
     
-    layer1 = newConvoulution1DLayer(x_in,(1,NoOfUsedInputSamples))
+    layer1 = newConvoulution1DLayer(x_in,(LenghtConv,NoFilters_1,1))
+    layer12 = newConvoulution1DLayer(layer1,(NoOfUsedInputSamples,NoFilters_2,NoFilters_1))
+    #reshape
     layer2 = newLinearReLULayer(layer1,NoOfOutputSamples,(1,100))
     y_pred=tf.nn.softmax(layer2)
     
@@ -61,28 +63,15 @@ def newLinearReLULayer(indata, number_of_neurons, in_dim):
     return activation  
 
 def newConvoulution1DLayer(indata,ConvCore):
+    #indata:    Input Tensor for Conv Layer [batchSize, inputDim1, inputDim2]
+    #ConvCore:  Shape of Convolution Core (filter) [filter_width, in_channels, out_channels(No of Filters)]
 
     init_random_dist = tf.truncated_normal(ConvCore, stddev=0.1)
     weights = tf.Variable(init_random_dist)
     init_bias_vals = tf.constant(0.1, shape=ConvCore)
     bias = tf.Variable(init_bias_vals)
-    activation = tf.nn.conv1d(indata,weights,strides=1,padding='SAME')+bias
+    activation = tf.nn.conv1d(indata,weights,strides=1,padding="SAME")+bias
     return tf.nn.relu(activation)
 
-def newLSTMLayer(indata,memoryLength):
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+#def newLSTMLayer(indata,memoryLength):
+    #
