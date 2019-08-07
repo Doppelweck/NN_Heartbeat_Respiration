@@ -14,19 +14,18 @@ import scipy
 from scipy import signal
 from scipy.io import loadmat
 import collections
-import nltk
 
-from keras.layers.core import Activation, Dense, Dropout, RepeatVector, SpatialDropout1D
-from keras.layers.embedding import Embedding
-from keras.layers.recurrent import GRU
-from keras.layers.wrapper import TimeDistributed
-from keras.utils import np_utils
-from sklearn.model_selection import train_test_split
-from keras.models import Model
-from keras.layers import *
-from keras.models import Sequential
-from keras.layers import Dense
-from keras.layers import LSTM
+#from keras.layers.core import Activation, Dense, Dropout, RepeatVector, SpatialDropout1D
+##from keras.layers.embedding import Embedding
+#from keras.layers.recurrent import GRU
+#from keras.layers.wrapper import TimeDistributed
+#from keras.utils import np_utils
+#from sklearn.model_selection import train_test_split
+#from keras.models import Model
+#from keras.layers import *
+#from keras.models import Sequential
+#from keras.layers import Dense
+#from keras.layers import LSTM
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
 
@@ -70,7 +69,7 @@ def newConvoulution1DLayer(indata,ConvCore):
     weights = tf.Variable(init_random_dist)
     init_bias_vals = tf.constant(0.1, shape=ConvCore)
     bias = tf.Variable(init_bias_vals)
-    activation = tf.nn.conv1d(indata,weights,strides=1,padding="SAME")+bias
+    activation = tf.nn.conv1d(indata,weights,stride=1,padding="SAME")+bias
     return tf.nn.relu(activation)
 
 #def newLSTMLayer(indata,memoryLength):

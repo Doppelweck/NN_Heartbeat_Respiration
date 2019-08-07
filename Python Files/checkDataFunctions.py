@@ -102,15 +102,47 @@ def plotFrequenzyProfile(DataMatrix,NoOfTestData):
     plt.tight_layout()
     plt.show()
     
+def splitDataIntoTrainingExamples1D(DataMatrix,NoInputCells,NoOutputCells,UseAllChannels):
+    #Splits all Radar Data into the correct Format for Training Session.
+    #
+    #DataMatrix: Contains 1 Set of TrainigData Tensor (Including Radar and Model Data)
+    #NoInputCells: Integer. No of used Input Samples feed into the NN.
+    #NoOutputCells: Integer. No of used Output Samples collect from the NN.
+    #UseAllChannels: Boolean. 
     
+    #Signals Label 
+    RespirationSignalTrue = np.array(DataMatrix.Radar.SignalRespirationHub_DownSample);
+    RespirationSignalTrue = RespirationSignalTrue.reshape((len(RespirationSignalTrue), 1));
+    HeartbeatSignalTrue = np.array(DataMatrix.Radar.SignalHeartbeatHub_DownSample);
+    HeartbeatSignalTrue = HeartbeatSignalTrue.reshape((len(HeartbeatSignalTrue), 1));
+    #Radar Signal Raw
+    Channel = 1;
+    RangeBin = 1;
+    RawData3D = DataMatrix.Radar.SignalsRaw;
+    RawData1D = np.array(np.squeeze(RawData3D[RangeBin,Channel,:])); #Get Time Signal of 1 Channel at 1 Ramp Bin
+    RawData1D = RawData1D.reshape((len(RawData1D), 1));
     
-    
-    
-    
-    
-    
-    
-    
-    
+    #Dataset Tensor (Input,OutputRespiration,OutputHeartbeat)
+    Dataset = np.hstack((RawData1D,RespirationSignalTrue,HeartbeatSignalTrue))
+    if UseAllChannels:
+        return False
+    else:
+        
+        # split Dataset sequence into samples for Training
+        X_input, y_LabelHB, y_LabelR, y_Label = list(), list(), list(), list()
+        for i in range(len(RawData1D)): #Split Input Sequence
+            # find end of Seqeunce
+            end_ix = i+ NoInputCells
+            if end_ix > len(RawData1D)-1: #End of Sequence
+                break
+            seq_x, seq_yR, seq_yHB  = RawData1D[i:end_ix], RespirationSignalTrue[i:end_ix], HeartbeatSignalTrue[i:end_ix];
+            X_input.append(seq_x);
+            y_LabelHB.append(seq_yHB);
+            y_LabelR.append(seq_yR);
+            
+            #y_LabelHB=y_LabelHB.reshape((len(in_seq1), 1))
+            
+        y_Label = np.vstack((y_LabelHB, y_LabelR)) 
+        return np.array(X_input), np.array(y_Label)
     
     
