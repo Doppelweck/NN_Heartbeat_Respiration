@@ -72,5 +72,17 @@ def newConvoulution1DLayer(indata,ConvCore):
     activation = tf.nn.conv1d(indata,weights,stride=1,padding="SAME")+bias
     return tf.nn.relu(activation)
 
+def newRNNLayer(n_inputs, n_neurons, n_steps):
+    X = tf.placeholder(tf.float32,[None, n_steps, n_inputs])
+    basic_cell = tf.contrib.rnn.BasicRNNCell(num_units=n_neurons)
+    outputs, states = tf.nn.dynamic_rnn(basic_cell, X, dtype=tf.float32)
+    return outputs,states
 #def newLSTMLayer(indata,memoryLength):
-    #
+#    #
+#    lstms = [tf.contrib.rnn.BasicLSTMCell(size) for size in lstm_sizes]
+    
+    
+    
+    
+    
+    
