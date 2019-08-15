@@ -127,22 +127,17 @@ def splitDataIntoTrainingExamples1D(DataMatrix,NoInputCells,NoOutputCells,UseAll
     if UseAllChannels:
         return False
     else:
-        
         # split Dataset sequence into samples for Training
-        X_input, y_LabelHB, y_LabelR, y_Label = list(), list(), list(), list()
+        X, y = list(), list()
         for i in range(len(RawData1D)): #Split Input Sequence
             # find end of Seqeunce
-            end_ix = i+ NoInputCells
-            if end_ix > len(RawData1D)-1: #End of Sequence
+            end_ix = i+ NoInputCells #No of Input cells = No od Output cells
+            if end_ix > len(RawData1D): #End of Sequence
                 break
-            seq_x, seq_yR, seq_yHB  = RawData1D[i:end_ix], RespirationSignalTrue[i:end_ix], HeartbeatSignalTrue[i:end_ix];
-            X_input.append(seq_x);
-            y_LabelHB.append(seq_yHB);
-            y_LabelR.append(seq_yR);
-            
-            #y_LabelHB=y_LabelHB.reshape((len(in_seq1), 1))
-            
-        y_Label = np.vstack((y_LabelHB, y_LabelR)) 
-        return np.array(X_input), np.array(y_Label)
+            seq_x, seq_y  = Dataset[i:end_ix, 0:1], Dataset[i:end_ix, 1:3];
+            X.append(seq_x)
+            y.append(seq_y)
+             
+        return np.array(X), np.array(y)
     
     
