@@ -137,7 +137,13 @@ def splitDataIntoTrainingExamples1D(DataMatrix,NoInputCells,NoOutputCells,UseAll
             seq_x, seq_y  = Dataset[i:end_ix, 0:1], Dataset[i:end_ix, 1:3];
             X.append(seq_x)
             y.append(seq_y)
-             
-        return np.array(X), np.array(y)
+            
+        # flatten input
+        y_Label=np.array(y)
+        n_input = y_Label.shape[1] * y_Label.shape[2]
+        y_LabelFlatt = y_Label.reshape(y_Label.shape[0],n_input,1)
+        x_data = np.array(X);
+        print(x_data.shape,y_LabelFlatt.shape)
+        return x_data, y_LabelFlatt
     
     

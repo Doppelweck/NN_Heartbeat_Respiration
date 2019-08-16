@@ -50,21 +50,15 @@ def createSeqentialModel():
     
 def newLinearReLULayer(indata, number_of_neurons, in_dim):
     # returns a new linear unit with ReLu activation
-    
     shape_w = (number_of_neurons, in_dim)
-
-    weight = tf.Variable(tf.truncated_normal(shape_w, stddev=0.05))
-
+    weight = tf.Variable(tf.truncated_normal(shape_w, stddev=0.5))
     bias = tf.Variable(tf.zeros([number_of_neurons,1]))
-
     activation = tf.transpose(tf.nn.relu(tf.matmul(weight, tf.transpose(indata)) + bias))
-
     return activation  
 
 def newConvoulution1DLayer(indata,ConvCore):
     #indata:    Input Tensor for Conv Layer [batchSize, inputDim1, inputDim2]
     #ConvCore:  Shape of Convolution Core (filter) [filter_width, in_channels, out_channels(No of Filters)]
-
     init_random_dist = tf.truncated_normal(ConvCore, stddev=0.1)
     weights = tf.Variable(init_random_dist)
     init_bias_vals = tf.constant(0.1, shape=ConvCore)
@@ -73,13 +67,18 @@ def newConvoulution1DLayer(indata,ConvCore):
     return tf.nn.relu(activation)
 
 def newRNNLayer(n_inputs, n_neurons, n_steps):
+    #
     X = tf.placeholder(tf.float32,[None, n_steps, n_inputs])
     basic_cell = tf.contrib.rnn.BasicRNNCell(num_units=n_neurons)
     outputs, states = tf.nn.dynamic_rnn(basic_cell, X, dtype=tf.float32)
     return outputs,states
-#def newLSTMLayer(indata,memoryLength):
-#    #
-#    lstms = [tf.contrib.rnn.BasicLSTMCell(size) for size in lstm_sizes]
+
+def newLSTMLayer(n_inputs, n_neurons, n_steps):
+    #
+    X = tf.placeholder(tf.float32,[None, n_steps, n_inputs])
+    basic_cell = tf.contrib.rnn.BasicLSTMCell(num_units=n_neurons)
+    outputs, states = tf.nn.dynamic_rnn(basic_cell, X, dtype=tf.float32)
+    return outputs,states
     
     
     
