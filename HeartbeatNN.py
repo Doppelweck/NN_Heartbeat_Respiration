@@ -17,6 +17,7 @@ from scipy import signal
 from scipy.io import loadmat
 from keras.models import Sequential
 from keras.layers import Dense
+from datetime import datetime
 
 #set working directory
 os.chdir('/Users/sebastianfriedrich/Documents/Hochschule Trier/Module/Masterprojekt (LAROS)/Python/')
@@ -26,21 +27,16 @@ sys.path.insert(0, '/Users/sebastianfriedrich/Documents/Hochschule Trier/Module/
 import dataFunctions
 import modelFunctions
 
+timestamp = datetime.now()
+tf.reset_default_graph()   # To clear the defined variables and operations of the previous cell
+
+SaveSessionLog = False;
 # =============================================================================
 #    Open Matlab Files
 # =============================================================================
 dataDir = "/Users/sebastianfriedrich/Documents/Hochschule Trier/Module/Masterprojekt (LAROS)/TrainingData/"
+TraningDataMatrixes,NoOfTrainingDataSets = dataFunctions.openTraingsDataFiles(dataDir);
 
-
-TraningDataMatrixes = []
-NoOfTrainingDataSets = 0
-
-for file in os.listdir(dataDir):
-    if file.endswith('.mat'): #Load only if .mat file (.ds_Stroe file causes error)
-        TraningDataMatrixes.append(scipy.io.loadmat(dataDir+file, struct_as_record=False, squeeze_me = True))
-        print("load Data from file "+file)
-        NoOfTrainingDataSets = NoOfTrainingDataSets+1
- 
 # =============================================================================
 #    Ckeck Selected Data
 # =============================================================================
@@ -52,15 +48,16 @@ dataFunctions.plotFrequenzyProfile(TraningDataMatrixes,1) #Plot Spectrogram of g
 #    Create Model
 # =============================================================================
 NoOfUsedInputChannels = 1;      #No of Channels used as Input for the Network
-NoOfUsedInputSamples = 10;     #No of Samples per Channel used as Input for the Network
+NoOfUsedInputSamples = 150;     #No of Samples per Channel used as Input for the Network
+NoOfUsedOutputSamples = 100;
 NoOfUsedOutputSignals = 2; #No of Outputsignals Can be 1 or 2 for Heartbeat and/or Respiration
-NoOfOutputSamples = NoOfUsedInputSamples*NoOfUsedOutputSignals;        #No of Sampels used for Output Signal
+NoOfOutputSamples = NoOfUsedOutputSamples*NoOfUsedOutputSignals;        #No of Sampels used for Output Signal
 
     
-x_in = tf.placeholder(tf.float32, [None,NoOfUsedInputSamples,NoOfUsedInputChannels]) #Define Input Data Structure [batchSize, inputDim1, inputDim2]
-y_outR = tf.placeholder(tf.float32, [None,NoOfOutputSamples,1]) #Define Output Data Structure for Respiration [batchSize, inputDim1, inputDim2]
-y_outH = tf.placeholder(tf.float32, [None,NoOfOutputSamples,1]) #Define Output Data Structure for Hertbeat [batchSize, inputDim1, inputDim2]
-y_Label = tf.placeholder(tf.float32, [None,NoOfOutputSamples,1]) #Define Output Data Structure for Hertbeat and Respiration[batchSize, inputDim1, inputDim2]    
+x_in = tf.placeholder(tf.float32, [None,NoOfUsedInputSamples,NoOfUsedInputChannels],name='x_in') #Define Input Data Structure [batchSize, inputDim1, inputDim2]
+#y_outR = tf.placeholder(tf.float32, [None,NoOfOutputSamples,1]) #Define Output Data Structure for Respiration [batchSize, inputDim1, inputDim2]
+#y_outH = tf.placeholder(tf.float32, [None,NoOfOutputSamples,1]) #Define Output Data Structure for Hertbeat [batchSize, inputDim1, inputDim2]
+y_Label = tf.placeholder(tf.float32, [None,NoOfOutputSamples,1],name='y_Label') #Define Output Data Structure for Hertbeat and Respiration[batchSize, inputDim1, inputDim2]    
 #Layer1
 LenghtConv_L1 = 5;
 NoFilters_L1 = 3;
@@ -79,18 +76,26 @@ NoFilters_L2 = 10;
 #full_layer_one = tf.nn.relu(normal_full_layer(layer1,NoOfOutputSamples))
 layer1 = modelFunctions.newLinearReLULayer(x_in, NoOfUsedInputSamples, NoOfUsedInputSamples)
 print(layer1)
-layer2 = modelFunctions.newLinearReLULayer(layer1, 30, NoOfUsedInputSamples)
+layer2 = modelFunctions.newLinearReLULayer(layer1, 200, NoOfUsedInputSamples)
 print(layer2)
-y_outHR = modelFunctions.newLinearReLULayer(layer2, NoOfOutputSamples, 30)
+layer3 = modelFunctions.newLinearReLULayer(layer2, 300, 200)
+print(layer3)
+y_outHR = modelFunctions.newLinearReLULayer(layer3, NoOfOutputSamples, 300)
 print(y_outHR)
 #
+#basic_cell = tf.contrib.rnn.BasicRNNCell(num_units=100, activation=tf.nn.relu)
+#
+#output, states = tf.nn.dynamic_rnn(basic_cell,x_in,dtype=tf.float32)
+#layer1 = modelFunctions.newLinearReLULayer(output, 100, NoOfUsedInputSamples)
+#y_outHR = modelFunctions.newLinearReLULayer(layer1, NoOfOutputSamples, 1)
 #num_hidden = 24
 #cell = tf.nn.rnn_cell.LSTMCell(num_hidden,state_is_tuple=True);
 #
 ## setup Learning/Cost Functions
-n_iterations = 100;
-batch_size = 1; #Anzahl gleichzeitiger Samples im Netz
-learning_Rate = 0.0005;
+n_iterations = 1;
+batch_size = 19; #Anzahl gleichzeitiger Samples im Netz
+learning_Rate = 0.05;
+DataInRandomOrder = False;
 
 loss = tf.reduce_mean(tf.square(y_outHR - y_Label)) #MSE
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_Rate)
@@ -109,33 +114,91 @@ init = tf.global_variables_initializer() #Initalize Global Variables and Placeho
 #model.add(Dense(20))
 #model.compile(optimizer='adam', loss='mse')
 #model.fit(X_input, y_Label, epochs=2000, verbose=0)
-
-merged = tf.summary.merge_all()
-writer = tf.summary.FileWriter('./logs/1/train ')
+if SaveSessionLog:
+    merged = tf.summary.merge_all()
+    TimeStamp = timestamp.strftime("Date_%d%m%Y_%H%M%S")
+    LogPath = './logs/train/'+TimeStamp;
+    writer = tf.summary.FileWriter(LogPath)
 
 with tf.Session() as sess:
     
     sess.run(init)
-    for k in range(NoOfTrainingDataSets-1):
-        #Prepare Data
-        X_input, Y_Label = dataFunctions.splitDataIntoTrainingExamples1D(TraningDataMatrixes[k]['Data'],NoOfUsedInputSamples,NoOfOutputSamples,False)
-        feed_dict_train = {x_in: X_input,y_Label:Y_Label};
+    for i_iteration in range(n_iterations):
         
-        for i in range(n_iterations):
-    #       SignalsRaw = TraningDataMatrixes[1]['Data'].Radar.SignalsRaw;
-    #       RespirationSignalTrue = TraningDataMatrixes[1]['Data'].Model.SignalRespirationHub;
-    #       feed_dict_train = {x_in: SignalsRaw,y_outH:RespirationSignalTrue}; #Assign Values to Placeholders
-            out_data=sess.run([train], feed_dict=feed_dict_train);
-#            summary = sess.run(merged,feed_dict=feed_dict_train);
-#            writer.add_summary(summary)
-    #       train_writer = tf.summary.FileWriter( './logs/1/train ', sess.graph)
-            if i %10==0:
-                acc, Ngrad = sess.run([loss ,NormGradLoss],feed_dict=feed_dict_train)
-#                session.run(loss, feed_dict=feed_dict_train) 
-#                mse=loss.eval(feed_dict=feed_dict_train)
-#                print(k,i, "\tMSE",mse)
-                print(k,i,acc,Ngrad)
+        for i_TrainDataSet in range(NoOfTrainingDataSets-1): #Get new Set of Training Data
+            #Prepare Data
+            X_input_NN, Y_Label_NN, NoOfSamples, y_LabelR, y_LabelHB = dataFunctions.splitDataIntoTrainingExamples1D(TraningDataMatrixes[i_TrainDataSet]['Data'],NoOfUsedInputSamples,NoOfOutputSamples,False)
+            
+            if DataInRandomOrder: #Shuffle Data Pairs in Random order
+                X_input_NN, Y_Label_NN = dataFunctions.shuffleCompleteDataBatch([X_input_NN, Y_Label_NN])
+                print('!!!!!!!!!!!! Data is in random order !!!!!!!!!!!!!!')
+            
+            # get total number of differnt Batches. One Batch contains n samles of Training Data with Size batch_size to feed into the Netowrk
+            i_Batches = dataFunctions.getNumberOfBatches(NoOfSamples,batch_size); #Total Number of different Batches
+            Total_No_Batches = i_Batches;
+            
+            for i_Batches in range(i_Batches): 
+                #get next batch
+                X_input_Batch, Y_Label_Batch = dataFunctions.nextBatch([X_input_NN, Y_Label_NN],batch_size,Total_No_Batches,i_Batches)
+                #feed batch into NN    
+                feed_dict_train = {x_in: X_input_Batch,y_Label:Y_Label_Batch};
+                #train the NN
+                out_data=sess.run([train], feed_dict=feed_dict_train);
+    
+                if i_Batches %10==0:
+                    acc, Ngrad = sess.run([loss ,NormGradLoss],feed_dict=feed_dict_train)
+                    
+                    print('Iteration:',i_iteration,'TrainSet:',i_TrainDataSet,' Batch:',i_Batches,' Acc:',acc,' NormGrad:',Ngrad)
                 
     pr=sess.run([y_outHR], feed_dict=feed_dict_train);                
-#writer.add_graph(sess.graph)
-        
+    
+    figPred = plt.figure()
+    plt.plot(pr)
+    plt.show()
+    plt.plot(Y_Label_Batch)
+    plt.show()
+    
+    if SaveSessionLog:
+        writer.add_graph(sess.graph)
+
+if SaveSessionLog:    
+    tensorboardString = "tensorboard --logdir='/Users/sebastianfriedrich/Documents/Hochschule Trier/Module/Masterprojekt (LAROS)/Python/" + "logs/train/"+TimeStamp + "'"
+    pathString = "/Users/sebastianfriedrich/Documents/Hochschule Trier/Module/Masterprojekt (LAROS)/Python/" + "logs/train/"+TimeStamp + "/tensorboard.txt"
+    print('') 
+    print('!!!! Tensorboard comand for terminal:')       
+    print(tensorboardString)
+    textFile = open(pathString,"w+")
+    textFile.write(tensorboardString)
+    textFile.close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
