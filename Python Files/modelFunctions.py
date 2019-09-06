@@ -56,6 +56,53 @@ def newLinearReLULayer(indata, number_of_neurons, in_dim):
     activation = tf.transpose(tf.nn.relu(tf.matmul(weight, tf.transpose(indata)) + bias))
     return activation  
 
+def neuron_Layer_FullyConnected(X,n_neurons,name,activation=None):
+    with tf.name_scope(name):
+        n_inputs = int(X.get_shape()[1])
+        stddev = 2/np.sqrt(n_inputs)
+        init = tf.truncated_normal((n_neurons,n_inputs),stddev=stddev)
+        W = tf.Variable(init, name="kernel")
+        bias = tf.Variable(tf.zeros([n_neurons,1]),name="bias")
+        Z = tf.matmul(W,X) + bias
+        if activation is not None:
+            return activation(Z)
+        else:
+            return Z
+        
+def neuron_Layer_TimeForwardConnected(X,n_neurons,name,activation=None):
+    n_inputs = int(X.get_shape()[1])
+    if n_neurons>n_inputs:
+        #Use fully Connected Layer
+        with tf.name_scope(name):
+            n_inputs = int(X.get_shape()[1])
+            stddev = 2/np.sqrt(n_inputs)
+            init = tf.truncated_normal((n_neurons,n_inputs),stddev=stddev)
+            W = tf.Variable(init, name="kernel")
+            bias = tf.Variable(tf.zeros([n_neurons,1]),name="bias")
+            Z = tf.matmul(W,X) + bias
+            if activation is not None:
+                return activation(Z)
+            else:
+                return Z
+    else: 
+        # Use Time Forward Connected Layer
+        with tf.name_scope(name):
+            n_inputs = int(X.get_shape()[1])
+            stddev = 2/np.sqrt(n_inputs)
+            stddev = 1
+            
+            mask = np.ones([n_neurons, n_inputs])
+            mask = np.tril(mask,n_neurons-n_inputs)
+            
+            init = tf.truncated_normal((n_neurons,n_inputs),stddev=stddev)
+            W = tf.Variable(init, name="kernel")
+            bias = tf.Variable(tf.zeros([n_neurons,1]),name="bias")
+            Z = tf.matmul(tf.math.multiply(W,mask),X) + bias
+            if activation is not None:
+                return activation(Z)
+            else:
+                return Z        
+
 def newConvoulution1DLayer(indata,ConvCore):
     #indata:    Input Tensor for Conv Layer [batchSize, inputDim1, inputDim2]
     #ConvCore:  Shape of Convolution Core (filter) [filter_width, in_channels, out_channels(No of Filters)]
