@@ -123,13 +123,13 @@ def splitDataIntoTrainingExamples1D(DataMatrix,NoInputCells,NoOutputCells,UseAll
     
     #Signals Label 
     RespirationSignalTrue = np.array(DataMatrix.Radar.SignalRespirationHub_DownSample);
-    RespirationSignalTrue = RespirationSignalTrue.reshape((len(RespirationSignalTrue), 1));
+    RespirationSignalTrue = RespirationSignalTrue.reshape((len(RespirationSignalTrue), 1))/2.45;
     HeartbeatSignalTrue = np.array(DataMatrix.Radar.SignalHeartbeatHub_DownSample);
-    HeartbeatSignalTrue = HeartbeatSignalTrue.reshape((len(HeartbeatSignalTrue), 1));
+    HeartbeatSignalTrue = HeartbeatSignalTrue.reshape((len(HeartbeatSignalTrue), 1))/2.45;
     #Radar Signal Raw
     Channel = 1;
     RangeBin = 1;
-    RawData3D = DataMatrix.Radar.SignalsRaw;
+    RawData3D = DataMatrix.Radar.SignalsRaw/(2**16);
     RawData1D = np.array(np.squeeze(RawData3D[RangeBin,Channel,:])); #Get Time Signal of 1 Channel at 1 Ramp Bin
     RawData1D = RawData1D.reshape((len(RawData1D), 1));
     
@@ -174,8 +174,8 @@ def splitDataIntoTrainingExamples1D(DataMatrix,NoInputCells,NoOutputCells,UseAll
             
             # flatten input
             y_Label=np.array(y)
-            y_LabelR = y_Label[:,:,0]
-            y_LabelHB = y_Label[:,:,1]
+            y_LabelHB = y_Label[:,:,0]
+            y_LabelR = y_Label[:,:,1]
             n_input = y_Label.shape[1] * y_Label.shape[2]
             y_LabelFlatt = y_Label.reshape(y_Label.shape[0],n_input,1)
             x_data = np.array(X);
