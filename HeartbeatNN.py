@@ -30,7 +30,7 @@ import modelFunctions
 timestamp = datetime.now()
 tf.reset_default_graph()   # To clear the defined variables and operations of the previous cell
 
-SaveSessionLog = False;
+SaveSessionLog = True;
 # =============================================================================
 #    Open Matlab Files
 # =============================================================================
@@ -48,16 +48,16 @@ dataFunctions.plotFrequenzyProfile(TraningDataMatrixes,1) #Plot Spectrogram of g
 #    Create Model
 # =============================================================================
 NoOfUsedInputChannels = 1;      #No of Channels used as Input for the Network
-NoOfUsedInputSamples = 150;     #No of Samples per Channel used as Input for the Network
+NoOfUsedInputSamples = 300;     #No of Samples per Channel used as Input for the Network
 NoOfUsedOutputSamples = 100;
 NoOfUsedOutputSignals = 2; #No of Outputsignals Can be 1 or 2 for Heartbeat and/or Respiration
 NoOfOutputSamples = NoOfUsedOutputSamples*NoOfUsedOutputSignals;        #No of Sampels used for Output Signal
 
-    
-x_in = tf.placeholder(tf.float32, [None,NoOfUsedInputSamples,NoOfUsedInputChannels],name='x_in') #Define Input Data Structure [batchSize, inputDim1, inputDim2]
-#y_outR = tf.placeholder(tf.float32, [None,NoOfOutputSamples,1]) #Define Output Data Structure for Respiration [batchSize, inputDim1, inputDim2]
-#y_outH = tf.placeholder(tf.float32, [None,NoOfOutputSamples,1]) #Define Output Data Structure for Hertbeat [batchSize, inputDim1, inputDim2]
-y_Label = tf.placeholder(tf.float32, [None,NoOfOutputSamples,1],name='y_Label') #Define Output Data Structure for Hertbeat and Respiration[batchSize, inputDim1, inputDim2]    
+with tf.name_scope('Placeholders'):    
+    x_in = tf.placeholder(tf.float32, [None,NoOfUsedInputSamples,NoOfUsedInputChannels],name='x_in') #Define Input Data Structure [batchSize, inputDim1, inputDim2]
+    #y_outR = tf.placeholder(tf.float32, [None,NoOfOutputSamples,1]) #Define Output Data Structure for Respiration [batchSize, inputDim1, inputDim2]
+    #y_outH = tf.placeholder(tf.float32, [None,NoOfOutputSamples,1]) #Define Output Data Structure for Hertbeat [batchSize, inputDim1, inputDim2]
+    y_Label = tf.placeholder(tf.float32, [None,NoOfOutputSamples,1],name='y_Label') #Define Output Data Structure for Hertbeat and Respiration[batchSize, inputDim1, inputDim2]    
 #Layer1
 LenghtConv_L1 = 5;
 NoFilters_L1 = 3;
@@ -74,30 +74,28 @@ NoFilters_L2 = 10;
 #layer1 = modelFunctions.newConvoulution1DLayer(x_in,(LenghtConv_L1,1,NoFilters_L1)) #[filter_width, in_channels, out_channels(No of Filters)]
 #layer2 = modelFunctions.newConvoulution1DLayer(layer1,(LenghtConv_L2,NoFilters_L1,10))
 #full_layer_one = tf.nn.relu(normal_full_layer(layer1,NoOfOutputSamples))
-layer1 = modelFunctions.newLinearReLULayer(x_in, NoOfUsedInputSamples, NoOfUsedInputSamples)
-print(layer1)
-layer2 = modelFunctions.newLinearReLULayer(layer1, 200, NoOfUsedInputSamples)
-print(layer2)
-layer3 = modelFunctions.newLinearReLULayer(layer2, 300, 200)
-print(layer3)
-y_outHR = modelFunctions.newLinearReLULayer(layer3, NoOfOutputSamples, 300)
-print(y_outHR)
+#layer1 = modelFunctions.newLinearReLULayer(x_in, NoOfUsedInputSamples, NoOfUsedInputSamples)
+#print(layer1)
+#layer2 = modelFunctions.newLinearReLULayer(layer1, 200, NoOfUsedInputSamples)
+#print(layer2)
+#layer3 = modelFunctions.newLinearReLULayer(layer2, 300, 200)
+#print(layer3)
+#y_outHR = modelFunctions.newLinearReLULayer(layer3, NoOfOutputSamples, 300)
+#print(y_outHR)
 #
-#basic_cell = tf.contrib.rnn.BasicRNNCell(num_units=100, activation=tf.nn.relu)
-#
-#output, states = tf.nn.dynamic_rnn(basic_cell,x_in,dtype=tf.float32)
-#layer1 = modelFunctions.newLinearReLULayer(output, 100, NoOfUsedInputSamples)
-#y_outHR = modelFunctions.newLinearReLULayer(layer1, NoOfOutputSamples, 1)
-#num_hidden = 24
-#cell = tf.nn.rnn_cell.LSTMCell(num_hidden,state_is_tuple=True);
+with tf.name_scope("NeuralNetwork"):
+    hidden1 = modelFunctions.neuron_Layer_FullyConnected(x_in,NoOfUsedInputSamples,"hidden1",activation=tf.nn.tanh)
+    hidden2 = modelFunctions.neuron_Layer_TimeForwardConnected(hidden1,260,"hidden2",activation=tf.nn.tanh)
+    hidden3 = modelFunctions.neuron_Layer_TimeForwardConnected(hidden2,230,"hidden3",activation=tf.nn.tanh)
+    y_outHR = modelFunctions.neuron_Layer_TimeForwardConnected(hidden3,NoOfOutputSamples,"outputLayer",activation=tf.nn.tanh)
 #
 ## setup Learning/Cost Functions
-n_iterations = 1;
-batch_size = 19; #Anzahl gleichzeitiger Samples im Netz
-learning_Rate = 0.05;
+n_iterations = 10;
+batch_size = 32; #Anzahl gleichzeitiger Samples im Netz
+learning_Rate = 0.0001;
 DataInRandomOrder = False;
 
-loss = tf.reduce_mean(tf.square(y_outHR - y_Label)) #MSE
+loss = tf.sqrt(tf.reduce_mean(tf.square(tf.subtract(y_outHR ,y_Label)))) #RMSE
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_Rate)
 train = optimizer.minimize(loss)
 teta=tf.trainable_variables()
@@ -118,7 +116,9 @@ if SaveSessionLog:
     merged = tf.summary.merge_all()
     TimeStamp = timestamp.strftime("Date_%d%m%Y_%H%M%S")
     LogPath = './logs/train/'+TimeStamp;
+    mse_summary = tf.summary.scalar('RMSE',loss)
     writer = tf.summary.FileWriter(LogPath)
+    step = 0
 
 with tf.Session() as sess:
     
@@ -147,16 +147,20 @@ with tf.Session() as sess:
     
                 if i_Batches %10==0:
                     acc, Ngrad = sess.run([loss ,NormGradLoss],feed_dict=feed_dict_train)
-                    
-                    print('Iteration:',i_iteration,'TrainSet:',i_TrainDataSet,' Batch:',i_Batches,' Acc:',acc,' NormGrad:',Ngrad)
-                
+#                    print('Iteration:',i_iteration,'TrainSet:',i_TrainDataSet,' Batch:',i_Batches,' Acc:',acc,' NormGrad:',Ngrad)
+                    if SaveSessionLog:
+                        summary_str = mse_summary.eval(feed_dict=feed_dict_train)
+                        step=step+1
+                        print('Step:',step)
+                        writer.add_summary(summary_str, step)
+                        
     pr=sess.run([y_outHR], feed_dict=feed_dict_train);                
     
-    figPred = plt.figure()
-    plt.plot(pr)
-    plt.show()
-    plt.plot(Y_Label_Batch)
-    plt.show()
+#    figPred = plt.figure()
+#    plt.plot(pr)
+#    plt.show()
+#    plt.plot(Y_Label_Batch)
+#    plt.show()
     
     if SaveSessionLog:
         writer.add_graph(sess.graph)
@@ -170,6 +174,7 @@ if SaveSessionLog:
     textFile = open(pathString,"w+")
     textFile.write(tensorboardString)
     textFile.close()
+    writer.close()
 
 
 
