@@ -1,1 +1,0 @@
-tensorboard --logdir='/Users/sebastianfriedrich/Documents/Hochschule Trier/Module/Masterprojekt (LAROS)/Python/logs/train/Date_06092019_161545'
