@@ -65,9 +65,9 @@ def neuron_Layer_FullyConnected(X,n_neurons,name,activation=None):
         bias = tf.Variable(tf.zeros([n_neurons,1]),name="bias")
         Z = tf.matmul(W,X) + bias
         if activation is not None:
-            return activation(Z)
+            return activation(Z),W
         else:
-            return Z
+            return Z,W
         
 def neuron_Layer_TimeForwardConnected(X,n_neurons,name,activation=None):
     n_inputs = int(X.get_shape()[1])
@@ -81,9 +81,9 @@ def neuron_Layer_TimeForwardConnected(X,n_neurons,name,activation=None):
             bias = tf.Variable(tf.zeros([n_neurons,1]),name="bias")
             Z = tf.matmul(W,X) + bias
             if activation is not None:
-                return activation(Z)
+                return activation(Z),W
             else:
-                return Z
+                return Z,W
     else: 
         # Use Time Forward Connected Layer
         with tf.name_scope(name):
@@ -92,16 +92,16 @@ def neuron_Layer_TimeForwardConnected(X,n_neurons,name,activation=None):
             stddev = 1
             
             mask = np.ones([n_neurons, n_inputs])
-            mask = np.tril(mask,n_neurons-n_inputs)
+            mask = np.tril(mask,-(n_neurons-n_inputs))
             
             init = tf.truncated_normal((n_neurons,n_inputs),stddev=stddev)
             W = tf.Variable(init, name="kernel")
             bias = tf.Variable(tf.zeros([n_neurons,1]),name="bias")
             Z = tf.matmul(tf.math.multiply(W,mask),X) + bias
             if activation is not None:
-                return activation(Z)
+                return activation(Z),W
             else:
-                return Z        
+                return Z,W      
 
 def newConvoulution1DLayer(indata,ConvCore):
     #indata:    Input Tensor for Conv Layer [batchSize, inputDim1, inputDim2]

@@ -84,14 +84,14 @@ NoFilters_L2 = 10;
 #print(y_outHR)
 #
 with tf.name_scope("NeuralNetwork"):
-    hidden1 = modelFunctions.neuron_Layer_FullyConnected(x_in,NoOfUsedInputSamples,"hidden1",activation=tf.nn.tanh)
-    hidden2 = modelFunctions.neuron_Layer_TimeForwardConnected(hidden1,260,"hidden2",activation=tf.nn.tanh)
-    hidden3 = modelFunctions.neuron_Layer_TimeForwardConnected(hidden2,230,"hidden3",activation=tf.nn.tanh)
-    y_outHR = modelFunctions.neuron_Layer_TimeForwardConnected(hidden3,NoOfOutputSamples,"outputLayer",activation=tf.nn.tanh)
+    hidden1,W1 = modelFunctions.neuron_Layer_FullyConnected(x_in,NoOfUsedInputSamples,"hidden1",activation=tf.nn.tanh)
+    hidden2,W2 = modelFunctions.neuron_Layer_TimeForwardConnected(hidden1,260,"hidden2",activation=tf.nn.tanh)
+    hidden3,W3 = modelFunctions.neuron_Layer_TimeForwardConnected(hidden2,230,"hidden3",activation=tf.nn.tanh)
+    y_outHR,W4 = modelFunctions.neuron_Layer_TimeForwardConnected(hidden3,NoOfOutputSamples,"outputLayer",activation=tf.nn.tanh)
 #
 ## setup Learning/Cost Functions
-n_iterations = 10;
-batch_size = 32; #Anzahl gleichzeitiger Samples im Netz
+n_iterations = 2;
+batch_size = 30; #Anzahl gleichzeitiger Samples im Netz
 learning_Rate = 0.0001;
 DataInRandomOrder = False;
 
@@ -100,23 +100,18 @@ optimizer = tf.train.AdamOptimizer(learning_rate=learning_Rate)
 train = optimizer.minimize(loss)
 teta=tf.trainable_variables()
 gradLoss = tf.gradients(loss,teta)
+gradW1 = tf.gradients(loss,W1)
 NormGradLoss = tf.linalg.global_norm(gradLoss)
 #
 ## create Session
 init = tf.global_variables_initializer() #Initalize Global Variables and Placeholders 
 
-
-
-#model = Sequential()
-#model.add(Dense(10, activation='relu', input_dim=n_input))
-#model.add(Dense(20))
-#model.compile(optimizer='adam', loss='mse')
-#model.fit(X_input, y_Label, epochs=2000, verbose=0)
 if SaveSessionLog:
     merged = tf.summary.merge_all()
     TimeStamp = timestamp.strftime("Date_%d%m%Y_%H%M%S")
     LogPath = './logs/train/'+TimeStamp;
-    mse_summary = tf.summary.scalar('RMSE',loss)
+    RMSE_summary = tf.summary.scalar('RMSE',loss)
+    NormGradient_summary = tf.summary.scalar('Normalized Gradient',NormGradLoss)
     writer = tf.summary.FileWriter(LogPath)
     step = 0
 
@@ -146,13 +141,19 @@ with tf.Session() as sess:
                 out_data=sess.run([train], feed_dict=feed_dict_train);
     
                 if i_Batches %10==0:
-                    acc, Ngrad = sess.run([loss ,NormGradLoss],feed_dict=feed_dict_train)
-#                    print('Iteration:',i_iteration,'TrainSet:',i_TrainDataSet,' Batch:',i_Batches,' Acc:',acc,' NormGrad:',Ngrad)
+                    Loss, Ngrad = sess.run([loss ,NormGradLoss],feed_dict=feed_dict_train)
+                    print('Iteration:',i_iteration,'TrainSet:',i_TrainDataSet,' Batch:',i_Batches,' Loss:',Loss,' NormGrad:',Ngrad)
                     if SaveSessionLog:
-                        summary_str = mse_summary.eval(feed_dict=feed_dict_train)
+                        summary_str = RMSE_summary.eval(feed_dict=feed_dict_train)
+                        summary_grad = NormGradient_summary.eval(feed_dict=feed_dict_train)
+                        summary_gradW1 = sess.run(gradW1,feed_dict=feed_dict_train)
+                        print(summary_gradW1)
+                        fig1 = plt.figure()
+                        plt.imshow(np.squeeze(np.array(summary_gradW1)),[])
+                        plt.show()
                         step=step+1
-                        print('Step:',step)
                         writer.add_summary(summary_str, step)
+                        writer.add_summary(summary_grad, step)
                         
     pr=sess.run([y_outHR], feed_dict=feed_dict_train);                
     
