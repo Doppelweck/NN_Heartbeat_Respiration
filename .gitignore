@@ -1,0 +1,7 @@
+##------------------------------------------
+# Dont track content of these folders and subfolders
+/logs/*
+
+# Dont track files with the following extension
+*.m~
+*.txt
