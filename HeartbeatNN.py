@@ -90,9 +90,9 @@ with tf.name_scope("NeuralNetwork"):
     y_outHR,W4 = modelFunctions.neuron_Layer_TimeForwardConnected(hidden3,NoOfOutputSamples,"outputLayer",activation=tf.nn.tanh)
 #
 ## setup Learning/Cost Functions
-n_iterations = 2;
+n_iterations = 4;
 batch_size = 30; #Anzahl gleichzeitiger Samples im Netz
-learning_Rate = 0.0001;
+learning_Rate = 0.0005;
 DataInRandomOrder = False;
 
 loss = tf.sqrt(tf.reduce_mean(tf.square(tf.subtract(y_outHR ,y_Label)))) #RMSE
@@ -120,13 +120,10 @@ with tf.Session() as sess:
     sess.run(init)
     for i_iteration in range(n_iterations):
         
-        for i_TrainDataSet in range(NoOfTrainingDataSets-1): #Get new Set of Training Data
+#        for i_TrainDataSet in range(NoOfTrainingDataSets-1): #Get new Set of Training Data
             #Prepare Data
-            X_input_NN, Y_Label_NN, NoOfSamples, y_LabelR, y_LabelHB = dataFunctions.splitDataIntoTrainingExamples1D(TraningDataMatrixes[i_TrainDataSet]['Data'],NoOfUsedInputSamples,NoOfOutputSamples,False)
-            
-            if DataInRandomOrder: #Shuffle Data Pairs in Random order
-                X_input_NN, Y_Label_NN = dataFunctions.shuffleCompleteDataBatch([X_input_NN, Y_Label_NN])
-                print('!!!!!!!!!!!! Data is in random order !!!!!!!!!!!!!!')
+            X_input_NN, Y_Label_NN, NoOfSamples, y_LabelR, y_LabelHB = dataFunctions.randomizeAllData(TraningDataMatrixes,NoOfTrainingDataSets,NoOfUsedInputSamples,NoOfOutputSamples,False)
+#            X_input_NN, Y_Label_NN, NoOfSamples, y_LabelR, y_LabelHB = dataFunctions.splitDataIntoTrainingExamples1D(TraningDataMatrixes[i_TrainDataSet]['Data'],NoOfUsedInputSamples,NoOfOutputSamples,False)
             
             # get total number of differnt Batches. One Batch contains n samles of Training Data with Size batch_size to feed into the Netowrk
             i_Batches = dataFunctions.getNumberOfBatches(NoOfSamples,batch_size); #Total Number of different Batches
@@ -141,27 +138,39 @@ with tf.Session() as sess:
                 out_data=sess.run([train], feed_dict=feed_dict_train);
     
                 if i_Batches %10==0:
+                    
                     Loss, Ngrad = sess.run([loss ,NormGradLoss],feed_dict=feed_dict_train)
                     print('Iteration:',i_iteration,'TrainSet:',i_TrainDataSet,' Batch:',i_Batches,' Loss:',Loss,' NormGrad:',Ngrad)
+                    
                     if SaveSessionLog:
+                        
                         summary_str = RMSE_summary.eval(feed_dict=feed_dict_train)
                         summary_grad = NormGradient_summary.eval(feed_dict=feed_dict_train)
                         summary_gradW1 = sess.run(gradW1,feed_dict=feed_dict_train)
-                        print(summary_gradW1)
-                        fig1 = plt.figure()
-                        plt.imshow(np.squeeze(np.array(summary_gradW1)),[])
-                        plt.show()
+#                        print(summary_gradW1)
+#                        fig1 = plt.figure()
+#                        plt.imshow(np.squeeze(np.array(summary_gradW1)),[])
+#                        plt.show()
+                        
                         step=step+1
                         writer.add_summary(summary_str, step)
                         writer.add_summary(summary_grad, step)
+                 
+                if i_Batches %200==0:    
                         
-    pr=sess.run([y_outHR], feed_dict=feed_dict_train);                
-    
-#    figPred = plt.figure()
-#    plt.plot(pr)
-#    plt.show()
-#    plt.plot(Y_Label_Batch)
-#    plt.show()
+                    pr=sess.run([y_outHR], feed_dict=feed_dict_train);
+                    pre=np.array(pr)
+                    pre=np.squeeze(pre)
+                    y_pre = pre.reshape(30,100,2)
+                    figPred = plt.figure()
+                    plt.plot(y_pre[0,:,0])
+                    plt.show()
+                    
+                    
+#                    Y_Label_Test = Y_Label_Batch.reshape(30,100,2)
+#                    figPred = plt.figure()
+#                    plt.plot(Y_Label_Test[0,:,0])
+#                    plt.show()
     
     if SaveSessionLog:
         writer.add_graph(sess.graph)

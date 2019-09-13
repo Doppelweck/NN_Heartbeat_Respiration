@@ -113,6 +113,40 @@ def plotFrequenzyProfile(DataMatrix,NoOfTestData):
     plt.tight_layout()
     plt.show()
     
+def randomizeAllData(TraingSetDataMatrix,NoOfTraingSets,NoInputCells,NoOutputCells,UseAllChannels):
+    TotalNoOfSamples = 0;
+    X, Y,Y_HB,Y_R = list(), list(), list(), list()
+    X_DATA = np.empty((0,NoInputCells,1));
+    Y_LABELFLATT = np.empty((0,NoOutputCells,1));
+    Y_LABELR = np.empty((0,int(NoOutputCells/2),1));
+    Y_LABELHB = np.empty((0,int(NoOutputCells/2),1));
+    
+    for i in range(NoOfTraingSets-1):
+        DataMatrix = TraingSetDataMatrix[i]['Data']
+        
+        #Split Every Traningset in 1D Examples according to the Number of Input/Output Cells
+        x_data, y_LabelFlatt, NoOfSamples, y_LabelR, y_LabelHB = splitDataIntoTrainingExamples1D(DataMatrix,NoInputCells,NoOutputCells,UseAllChannels)
+        
+        X_DATA = np.vstack((X_DATA, x_data))
+        Y_LABELFLATT = np.vstack((Y_LABELFLATT, y_LabelFlatt))
+        Y_LABELR = np.vstack((Y_LABELR, y_LabelR))
+        Y_LABELHB = np.vstack((Y_LABELHB, y_LabelHB))
+        TotalNoOfSamples = TotalNoOfSamples + NoOfSamples;
+
+        
+    # Shuffles all Data 
+    indices = np.arange(X_DATA.shape[0])
+    np.random.shuffle(indices)
+    X_DATA = X_DATA[indices]
+    Y_LABELFLATT = Y_LABELFLATT[indices]
+    Y_LABELR = Y_LABELR[indices]
+    Y_LABELHB = Y_LABELHB[indices]
+    
+    
+    return X_DATA, Y_LABELFLATT,TotalNoOfSamples, Y_LABELR,Y_LABELHB
+        
+    
+    
 def splitDataIntoTrainingExamples1D(DataMatrix,NoInputCells,NoOutputCells,UseAllChannels):
     #Splits all Radar Data into the correct Format for Training Session.
     #
@@ -130,7 +164,7 @@ def splitDataIntoTrainingExamples1D(DataMatrix,NoInputCells,NoOutputCells,UseAll
     Channel = 1;
     RangeBin = 1;
     RawData3D = DataMatrix.Radar.SignalsRaw/(2**16);
-    RawData1D = np.array(np.squeeze(RawData3D[RangeBin,Channel,:])); #Get Time Signal of 1 Channel at 1 Ramp Bin
+    RawData1D = np.array(np.squeeze(RawData3D[RangeBin,Channel,:])); #Get Time Signal of 1 Channel at 1 Range Bin
     RawData1D = RawData1D.reshape((len(RawData1D), 1));
     
     #Dataset Tensor (Input,OutputRespiration,OutputHeartbeat)
@@ -152,13 +186,15 @@ def splitDataIntoTrainingExamples1D(DataMatrix,NoInputCells,NoOutputCells,UseAll
                 
             # flatten input
             y_Label=np.array(y)
+            y_LabelHB = y_Label[:,:,0]
+            y_LabelR = y_Label[:,:,1]
             n_input = y_Label.shape[1] * y_Label.shape[2]
             y_LabelFlatt = y_Label.reshape(y_Label.shape[0],n_input,1)
             x_data = np.array(X);
             print(x_data.shape,y_LabelFlatt.shape)
             
             NoOfSamples = x_data.shape[0]
-            return x_data, y_LabelFlatt, NoOfSamples
+            return x_data, y_LabelFlatt, NoOfSamples, y_LabelR, y_LabelHB
         
         elif NoInputCells > NoOutputCells/2:
             yDelay = int(NoInputCells-NoOutputCells/2);
@@ -176,6 +212,8 @@ def splitDataIntoTrainingExamples1D(DataMatrix,NoInputCells,NoOutputCells,UseAll
             y_Label=np.array(y)
             y_LabelHB = y_Label[:,:,0]
             y_LabelR = y_Label[:,:,1]
+            y_LabelR = np.expand_dims(y_LabelR, axis=2)
+            y_LabelHB = np.expand_dims(y_LabelHB, axis=2)
             n_input = y_Label.shape[1] * y_Label.shape[2]
             y_LabelFlatt = y_Label.reshape(y_Label.shape[0],n_input,1)
             x_data = np.array(X);
