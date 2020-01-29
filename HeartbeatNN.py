@@ -31,11 +31,12 @@ timestamp = datetime.now()
 tf.reset_default_graph()   # To clear the defined variables and operations of the previous cell
 
 SaveSessionLog = True;
+OnlyForTesting = True; #Only Load 5 Data Files
 # =============================================================================
 #    Open Matlab Files
 # =============================================================================
 dataDir = "/Users/sebastianfriedrich/Documents/Hochschule Trier/Module/Masterprojekt (LAROS)/TrainingData/"
-TraningDataMatrixes,NoOfTrainingDataSets = dataFunctions.openTraingsDataFiles(dataDir);
+TraningDataMatrixes,NoOfTrainingDataSets = dataFunctions.openTraingsDataFiles(dataDir,OnlyForTesting);
 
 # =============================================================================
 #    Ckeck Selected Data
@@ -58,41 +59,18 @@ with tf.name_scope('Placeholders'):
     #y_outR = tf.placeholder(tf.float32, [None,NoOfOutputSamples,1]) #Define Output Data Structure for Respiration [batchSize, inputDim1, inputDim2]
     #y_outH = tf.placeholder(tf.float32, [None,NoOfOutputSamples,1]) #Define Output Data Structure for Hertbeat [batchSize, inputDim1, inputDim2]
     y_Label = tf.placeholder(tf.float32, [None,NoOfOutputSamples,1],name='y_Label') #Define Output Data Structure for Hertbeat and Respiration[batchSize, inputDim1, inputDim2]    
-#Layer1
-LenghtConv_L1 = 5;
-NoFilters_L1 = 3;
-
-#Layer2
-LenghtConv_L2 = 10;
-NoFilters_L2 = 10;
-
-#Prepare Data
-#X_input, y_Label = dataFunctions.splitDataIntoTrainingExamples1D(TraningDataMatrixes[1]['Data'],NoOfUsedInputSamples,NoOfOutputSamples,False)
 
 
-# setup computational graph
-#layer1 = modelFunctions.newConvoulution1DLayer(x_in,(LenghtConv_L1,1,NoFilters_L1)) #[filter_width, in_channels, out_channels(No of Filters)]
-#layer2 = modelFunctions.newConvoulution1DLayer(layer1,(LenghtConv_L2,NoFilters_L1,10))
-#full_layer_one = tf.nn.relu(normal_full_layer(layer1,NoOfOutputSamples))
-#layer1 = modelFunctions.newLinearReLULayer(x_in, NoOfUsedInputSamples, NoOfUsedInputSamples)
-#print(layer1)
-#layer2 = modelFunctions.newLinearReLULayer(layer1, 200, NoOfUsedInputSamples)
-#print(layer2)
-#layer3 = modelFunctions.newLinearReLULayer(layer2, 300, 200)
-#print(layer3)
-#y_outHR = modelFunctions.newLinearReLULayer(layer3, NoOfOutputSamples, 300)
-#print(y_outHR)
-#
 with tf.name_scope("NeuralNetwork"):
-    hidden1,W1 = modelFunctions.neuron_Layer_FullyConnected(x_in,NoOfUsedInputSamples,"hidden1",activation=tf.nn.tanh)
-    hidden2,W2 = modelFunctions.neuron_Layer_TimeForwardConnected(hidden1,260,"hidden2",activation=tf.nn.tanh)
-    hidden3,W3 = modelFunctions.neuron_Layer_TimeForwardConnected(hidden2,230,"hidden3",activation=tf.nn.tanh)
-    y_outHR,W4 = modelFunctions.neuron_Layer_TimeForwardConnected(hidden3,NoOfOutputSamples,"outputLayer",activation=tf.nn.tanh)
+    Layer1,W1 = modelFunctions.neuron_Layer_FullyConnected(x_in,NoOfUsedInputSamples,"InputLayer",activation=tf.nn.tanh)
+    Layer2,W2 = modelFunctions.neuron_Layer_TimeForwardConnected(Layer1,260,"hidden2",activation=tf.nn.tanh)
+    Layer3,W3 = modelFunctions.neuron_Layer_TimeForwardConnected(Layer2,230,"hidden3",activation=tf.nn.tanh)
+    y_outHR,W4 = modelFunctions.neuron_Layer_TimeForwardConnected(Layer3,NoOfOutputSamples,"outputLayer",activation=tf.nn.tanh)
 #
 ## setup Learning/Cost Functions
-n_iterations = 4;
-batch_size = 30; #Anzahl gleichzeitiger Samples im Netz
-learning_Rate = 0.0005;
+n_iterations = 5;
+batch_size = 20; #Anzahl gleichzeitiger Samples im Netz
+learning_Rate = 0.0008;
 DataInRandomOrder = False;
 
 loss = tf.sqrt(tf.reduce_mean(tf.square(tf.subtract(y_outHR ,y_Label)))) #RMSE
@@ -131,7 +109,7 @@ with tf.Session() as sess:
             
             for i_Batches in range(i_Batches): 
                 #get next batch
-                X_input_Batch, Y_Label_Batch = dataFunctions.nextBatch([X_input_NN, Y_Label_NN],batch_size,Total_No_Batches,i_Batches)
+                 X_input_Batch, Y_Label_Batch, y_LabelR_Batch, y_LabelHB_Batch = dataFunctions.nextBatch([X_input_NN, Y_Label_NN, y_LabelR, y_LabelHB],batch_size,Total_No_Batches,i_Batches)
                 #feed batch into NN    
                 feed_dict_train = {x_in: X_input_Batch,y_Label:Y_Label_Batch};
                 #train the NN
@@ -140,7 +118,7 @@ with tf.Session() as sess:
                 if i_Batches %10==0:
                     
                     Loss, Ngrad = sess.run([loss ,NormGradLoss],feed_dict=feed_dict_train)
-                    print('Iteration:',i_iteration,'TrainSet:',i_TrainDataSet,' Batch:',i_Batches,' Loss:',Loss,' NormGrad:',Ngrad)
+                    print('Iteration:',i_iteration,' Batch:',i_Batches,' Loss:',Loss,' NormGrad:',Ngrad)
                     
                     if SaveSessionLog:
                         
@@ -161,9 +139,18 @@ with tf.Session() as sess:
                     pr=sess.run([y_outHR], feed_dict=feed_dict_train);
                     pre=np.array(pr)
                     pre=np.squeeze(pre)
-                    y_pre = pre.reshape(30,100,2)
+                    y_pre = pre.reshape(pre.shape[0],100,2)
+                    
+                    Y_Label_Test = Y_Label_Batch.reshape(Y_Label_Batch.shape[0],100,2)
+                    
                     figPred = plt.figure()
                     plt.plot(y_pre[0,:,0])
+                    plt.plot(Y_Label_Test[0,:,0])
+                    plt.show()
+                    
+                    figPred = plt.figure()
+                    plt.plot(y_pre[0,:,1])
+                    plt.plot(Y_Label_Test[0,:,1])
                     plt.show()
                     
                     
