@@ -72,7 +72,7 @@ def openTraingsDataFiles(dataDir,OnlyForTesting):
             List = os.listdir(dataDir);
             List = List[0:6]
             for file in List:
-                if file.endswith('.mat'): #Load only if .mat file (.ds_Stroe file causes error)
+                if file.endswith('.mat') and 'TrainingData' in file : #Load only if .mat file (.ds_Stroe file causes error)
                     TraningDataMatrixes.append(scipy.io.loadmat(dataDir+file, struct_as_record=False, squeeze_me = True))
                     print("load Data from file "+file)
                     NoOfTrainingDataSets = NoOfTrainingDataSets+1
@@ -194,18 +194,32 @@ def splitDataIntoTrainingExamples1D(DataMatrix,NoInputCells,NoOutputCells,UseAll
     
     FFToverRamps = np.array(DataMatrix.Radar.FFToverRamps);
     #Radar Signal Raw
-    Channel = 2;
+    Channel = 4;
     RangeBin = 1;
     
-    Phase = np.array(DataMatrix.Radar.Phase[Channel,:])
+    Phase = np.array(DataMatrix.Radar.Phase[Channel-1,:])
     Phase = Phase.reshape((len(Phase), 1))
-    PhaseUnwrap = np.array(DataMatrix.Radar.PhaseUnwrap[Channel,:])
+    PhaseUnwrap = np.array(DataMatrix.Radar.PhaseUnwrap[Channel-1,:])
     PhaseUnwrap = PhaseUnwrap.reshape((len(PhaseUnwrap), 1))*(-1)
     
+    figPred = plt.figure()
+    plt.plot(PhaseUnwrap)
+    plt.show()
+
+    PhaseUnwrap = (PhaseUnwrap - np.mean(PhaseUnwrap))/(2*3.141592/6*2.45)
+    
+    figPred = plt.figure()
+    plt.plot(PhaseUnwrap)
+    plt.show()
+#    
+    figPred = plt.figure()
+    plt.plot(RespirationSignalTrue)
+    plt.show()
+    
     RawData3D = DataMatrix.Radar.SignalsRaw/(2**16);
-    RawData1D = np.array(np.squeeze(RawData3D[RangeBin,Channel,:])); #Get Time Signal of 1 Channel at 1 Range Bin
+    RawData1D = np.array(np.squeeze(RawData3D[RangeBin,Channel-1,:])); #Get Time Signal of 1 Channel at 1 Range Bin
     RawData1D = RawData1D.reshape((len(RawData1D), 1));
-    FFTSignal = np.array(np.squeeze(FFToverRamps[RangeBin,Channel,:]));
+    FFTSignal = np.array(np.squeeze(FFToverRamps[RangeBin,Channel-1,:]));
     FFTSignal = FFTSignal.reshape((len(FFTSignal), 1));
     #Dataset Tensor (Input,OutputRespiration,OutputHeartbeat)
 

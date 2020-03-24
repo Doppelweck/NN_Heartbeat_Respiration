@@ -30,7 +30,7 @@ import modelFunctions
 timestamp = datetime.now()
 tf.reset_default_graph()   # To clear the defined variables and operations of the previous cell
 
-SaveSessionLog = True;
+SaveSessionLog = False;
 OnlyForTesting = True; #Only Load 5 Data Files
 # =============================================================================
 #    Open Matlab Files
@@ -109,7 +109,7 @@ with tf.Session() as sess:
             
             for i_Batches in range(i_Batches): 
                 #get next batch
-                 X_input_Batch, Y_Label_Batch, y_LabelR_Batch, y_LabelHB_Batch = dataFunctions.nextBatch([X_input_NN, Y_Label_NN, y_LabelR, y_LabelHB],batch_size,Total_No_Batches,i_Batches)
+                X_input_Batch, Y_Label_Batch, y_LabelR_Batch, y_LabelHB_Batch = dataFunctions.nextBatch([X_input_NN, Y_Label_NN, y_LabelR, y_LabelHB],batch_size,Total_No_Batches,i_Batches)
                 #feed batch into NN    
                 feed_dict_train = {x_in: X_input_Batch,y_Label:Y_Label_Batch};
                 #train the NN

@@ -67,8 +67,10 @@ def meanFree(X,name):
     with tf.name_scope(name):
         n_inputs = int(X.get_shape()[1])
         W = tf.ones([n_inputs,1])
-        mean = tf.reduce_sum( tf.multiply( W, X ))/n_inputs
-        X_meanFree = X-mean
+#        mean = tf.reduce_sum( tf.multiply( W, X ))/n_inputs
+        tempX = tf.squeeze(X,[0])
+        mean=tf.reduce_mean(tempX)
+        X_meanFree = (X-mean)/(2*3.141592/6*(2*2.45))
         return X_meanFree
 
 def neuron_Layer_FullyConnected(X,n_neurons,name,activation=None):
