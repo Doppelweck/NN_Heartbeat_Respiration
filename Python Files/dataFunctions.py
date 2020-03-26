@@ -285,6 +285,153 @@ def splitDataIntoTrainingExamples1D(DataMatrix,NoInputCells,NoOutputCells,UseAll
             return x_data, x_phase, y_LabelFlatt, NoOfSamples, y_LabelR, y_LabelHB
         else:
             return False
+
+def randomizeAllData_Synthetic(TraingSetDataMatrix,NoOfTraingSets,NoInputCells,NoOutputCells,UseAllChannels):
+    TotalNoOfSamples = 0;
+    #X, Y,Y_HB,Y_R = list(), list(), list(), list()
+    
+    #X_DATA = np.empty((0,NoInputCells,1));
+    X_PHASE = np.empty((0,NoInputCells,1));
+    Y_LABELFLATT = np.empty((0,NoOutputCells,1));
+    Y_LABELR = np.empty((0,int(NoOutputCells/2),1));
+    Y_LABELHB = np.empty((0,int(NoOutputCells/2),1));
+    
+    for i in range(NoOfTraingSets-1):
+        DataMatrix = TraingSetDataMatrix[i]['Data']
+        
+        #Split Every Traningset in 1D Examples according to the Number of Input/Output Cells
+        x_phase, y_LabelFlatt, NoOfSamples, y_LabelR, y_LabelHB = splitDataIntoTrainingExamples1D_Synthetic(DataMatrix,NoInputCells,NoOutputCells,UseAllChannels)
+
+        #X_DATA = np.vstack((X_DATA, x_data))
+        X_PHASE = np.vstack((X_PHASE, x_phase))
+        Y_LABELFLATT = np.vstack((Y_LABELFLATT, y_LabelFlatt))
+        Y_LABELR = np.vstack((Y_LABELR, y_LabelR))
+        Y_LABELHB = np.vstack((Y_LABELHB, y_LabelHB))
+        TotalNoOfSamples = TotalNoOfSamples + NoOfSamples;
+
+    
+#    figPred = plt.figure()
+#    plt.plot()
+#    plt.show()
+    
+    # Shuffles all Data 
+    indices = np.arange(X_PHASE.shape[0])
+    np.random.shuffle(indices)
+    X_PHASE = X_PHASE[indices]
+    Y_LABELFLATT = Y_LABELFLATT[indices]
+    Y_LABELR = Y_LABELR[indices]
+    Y_LABELHB = Y_LABELHB[indices]
+    
+    
+    return  X_PHASE, Y_LABELFLATT, TotalNoOfSamples, Y_LABELR, Y_LABELHB
+
+def splitDataIntoTrainingExamples1D_Synthetic(DataMatrix,NoInputCells,NoOutputCells,UseAllChannels):
+    #Splits all Radar Data into the correct Format for Training Session.
+    #
+    #DataMatrix: Contains 1 Set of TrainigData Tensor (Including Radar and Model Data)
+    #NoInputCells: Integer. No of used Input Samples feed into the NN.
+    #NoOutputCells: Integer. No of used Output Samples collect from the NN.
+    #UseAllChannels: Boolean. 
+    
+    #Signals Label 
+    RespirationSignalTrue = np.array(DataMatrix.Radar.SignalRespiration_Speaker_DownSample);
+    RespirationSignalTrue = RespirationSignalTrue.reshape((len(RespirationSignalTrue), 1));
+    
+    HeartbeatSignalTrue = np.array(DataMatrix.Radar.SignalHeartbeat_Speaker_DownSample);
+    HeartbeatSignalTrue = HeartbeatSignalTrue.reshape((len(HeartbeatSignalTrue), 1));
+    
+    # FFToverRamps = np.array(DataMatrix.Radar.FFToverRamps);
+    # #Radar Signal Raw
+    # Channel = 4;
+    # RangeBin = 1;
+    
+    # Phase = np.array(DataMatrix.Radar.Phase[Channel-1,:])
+    # Phase = Phase.reshape((len(Phase), 1))
+    # PhaseUnwrap = np.array(DataMatrix.Radar.PhaseUnwrap[Channel-1,:])
+    # PhaseUnwrap = PhaseUnwrap.reshape((len(PhaseUnwrap), 1))*(-1)
+    
+    # figPred = plt.figure()
+    # plt.plot(PhaseUnwrap)
+    # plt.show()
+
+    PhaseUnwrap = np.array(DataMatrix.Radar.SignalRHB_Speaker_Noise_DownSample);
+    PhaseUnwrap = PhaseUnwrap.reshape((len(PhaseUnwrap), 1));
+    
+    # figPred = plt.figure()
+    # plt.plot(PhaseUnwrap)
+    # plt.show()
+    
+    # figPred = plt.figure()
+    # plt.plot(RespirationSignalTrue)
+    # plt.show()
+    
+    # RawData3D = DataMatrix.Radar.SignalsRaw/(2**16);
+    # RawData1D = np.array(np.squeeze(RawData3D[RangeBin,Channel-1,:])); #Get Time Signal of 1 Channel at 1 Range Bin
+    # RawData1D = RawData1D.reshape((len(RawData1D), 1));
+    # FFTSignal = np.array(np.squeeze(FFToverRamps[RangeBin,Channel-1,:]));
+    # FFTSignal = FFTSignal.reshape((len(FFTSignal), 1));
+    #Dataset Tensor (Input,OutputRespiration,OutputHeartbeat)
+
+    Dataset = np.hstack((RespirationSignalTrue,HeartbeatSignalTrue,PhaseUnwrap))
+    
+    if UseAllChannels:
+        return False
+    else:
+        if NoInputCells == NoOutputCells/2: #Same lenght for Input Signal and each Output Signal
+            # split Dataset sequence into samples for Training
+            y, p= list(), list()
+            for i in range(len(RespirationSignalTrue)): #Split Input Sequence
+                # find end of Seqeunce
+                end_ix = i+ NoInputCells #No of Input cells = No od Output cells
+                if end_ix > len(RespirationSignalTrue): #End of Sequence
+                    break
+                seq_y , seq_p = Dataset[i:end_ix, 0:2], Dataset[i:end_ix, 2:3];
+                
+                y.append(seq_y)
+                p.append(seq_p)
+                
+            # flatten input
+            y_Label=np.array(y)
+            y_LabelHB = y_Label[:,:,1]
+            y_LabelR = y_Label[:,:,0]
+            y_LabelR = np.expand_dims(y_LabelR, axis=2)
+            y_LabelHB = np.expand_dims(y_LabelHB, axis=2)
+            n_input = y_Label.shape[1] * y_Label.shape[2]
+            y_LabelFlatt = y_Label.reshape(y_Label.shape[0],n_input,1)
+            x_phase = np.array(p);
+#
+            
+            NoOfSamples = x_phase.shape[0]
+            return  x_phase, y_LabelFlatt, NoOfSamples, y_LabelR, y_LabelHB
+        
+        elif NoInputCells > NoOutputCells/2:
+            yDelay = int(NoInputCells-NoOutputCells/2);
+            y, p= list(), list()
+            for i in range(len(RespirationSignalTrue)): #Split Input Sequence
+                # find end of Seqeunce
+                end_ix = i+ NoInputCells #No of Input cells = No od Output cells
+                if end_ix > len(RespirationSignalTrue): #End of Sequence
+                    break
+                seq_y , seq_p = Dataset[i:end_ix, 0:2], Dataset[i+yDelay:end_ix, 2:3];
+                
+                y.append(seq_y)
+                p.append(seq_p)
+            
+            # flatten input
+            y_Label=np.array(y)
+            y_LabelHB = y_Label[:,:,1]
+            y_LabelR = y_Label[:,:,0]
+            y_LabelR = np.expand_dims(y_LabelR, axis=2)
+            y_LabelHB = np.expand_dims(y_LabelHB, axis=2)
+            n_input = y_Label.shape[1] * y_Label.shape[2]
+            y_LabelFlatt = y_Label.reshape(y_Label.shape[0],n_input,1)
+            x_phase = np.array(p);
+
+            
+            NoOfSamples = x_phase.shape[0]
+            return x_phase, y_LabelFlatt, NoOfSamples, y_LabelR, y_LabelHB
+        else:
+            return False
         
 def plotSignal(Data):
     
