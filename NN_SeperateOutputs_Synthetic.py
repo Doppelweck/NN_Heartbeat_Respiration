@@ -37,7 +37,7 @@ import modelFunctions
 timestamp = datetime.now()
 tf.reset_default_graph()   # To clear the defined variables and operations of the previous cell
 
-SaveSessionLog = False;
+SaveSessionLog = True;
 OnlyForTesting = True; #Only Load 5 Data Files
 
 # =============================================================================
@@ -82,12 +82,13 @@ with tf.name_scope("NeuralNetwork"):
 #    Layer2,W2 = modelFunctions.neuron_Layer_TimeForwardConnected(Layer1,260,"hidden2",activation=tf.nn.tanh)
 #    Layer3,W2 = modelFunctions.neuron_Layer_TimeForwardConnected(Layer2,230,"hidden3",activation=tf.nn.tanh)
 #   Split NN for Heartbeat
-    Layer1_HB,W1_HB = modelFunctions.neuron_Layer_FullyConnected(x_in,300,"hidden1_HB",activation=tf.nn.tanh)
-    Layer2_HB,W2_HB = modelFunctions.neuron_Layer_FullyConnected(Layer1_HB,300,"hidden2_HB",activation=tf.nn.tanh)
+    Layer1_HB,W1_HB = modelFunctions.neuron_Layer_TimeForwardConnected(x_in,300,"hidden1_HB",activation=tf.nn.tanh)
+    Layer2_HB,W2_HB = modelFunctions.neuron_Layer_TimeForwardConnected(Layer1_HB,300,"hidden2_HB",activation=tf.nn.tanh)
+    Layer3_HB,W3_HB = modelFunctions.neuron_Layer_TimeForwardConnected(Layer2_HB,300,"hidden2_HB",activation=tf.nn.tanh)
 #    Layer3_HB,W3_HB = modelFunctions.neuron_Layer_TimeForwardConnected(Layer2_HB,350,"hidden3_HB",activation=tf.nn.tanh)
-    y_Out_H,WOut_HB = modelFunctions.neuron_Layer_FullyConnected(Layer2_HB,NoOfUsedOutputSamplesPerSignal,"outputLayer_HB",None)
+    y_Out_H,WOut_HB = modelFunctions.neuron_Layer_FullyConnected(Layer3_HB,NoOfUsedOutputSamplesPerSignal,"outputLayer_HB",None)
 #   Split NN for Respiration
-    Layer1_R,W1_R = modelFunctions.neuron_Layer_FullyConnected(x_in,300,"hidden1_R",activation=tf.nn.tanh)
+    Layer1_R,W1_R = modelFunctions.neuron_Layer_TimeForwardConnected(x_in,300,"hidden1_R",activation=tf.nn.tanh)
     Layer2_R,W2_R = modelFunctions.neuron_Layer_FullyConnected(Layer1_R,300,"hidden2_R",activation=tf.nn.tanh)
 #    Layer3_R,W3_R = modelFunctions.neuron_Layer_TimeForwardConnected(Layer2_R,350,"hidden3_R",activation=tf.nn.tanh)
     y_Out_R,WOut_R = modelFunctions.neuron_Layer_FullyConnected(Layer2_R,NoOfUsedOutputSamplesPerSignal,"outputLayer_R",None)    
