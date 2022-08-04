@@ -140,7 +140,7 @@ with tf.Session() as sess:
 #        for i_TrainDataSet in range(NoOfTrainingDataSets-1): #Get new Set of Training Data
             #Prepare Data
             X_Phase_NN, Y_Label_NN, NoOfSamples, y_LabelR, y_LabelHB = dataFunctions.randomizeAllData_Synthetic(TraningDataMatrixes,NoOfTrainingDataSets,NoOfUsedInputSamples,NoOfOutputSamples,False);
-#            X_input_NN, Y_Label_NN, NoOfSamples, y_LabelR, y_LabelHB = dataFunctions.splitDataIntoTrainingExamples1D(TraningDataMatrixes[i_TrainDataSet]['Data'],NoOfUsedInputSamples,NoOfOutputSamples,False)
+#            X_input_NN, Y_Label_NN, NoOfSamples, y_LabelR, y_LabelHB = dataFunctions.splitDataIntoTrainingExamples1D(TrainingDataMatrixes[i_TrainDataSet]['Data'],NoOfUsedInputSamples,NoOfOutputSamples,False)
             
             # get total number of differnt Batches. One Batch contains n samles of Training Data with Size batch_size to feed into the Netowrk
             n_Batches = dataFunctions.getNumberOfBatches(NoOfSamples,batch_size); #Total Number of different Batches

@@ -36,13 +36,13 @@ OnlyForTesting = True; #Only Load 5 Data Files
 #    Open Matlab Files
 # =============================================================================
 dataDir = "/Users/sebastianfriedrich/Documents/Hochschule Trier/Module/Masterprojekt (LAROS)/TrainingData/"
-TraningDataMatrixes,NoOfTrainingDataSets = dataFunctions.openTraingsDataFiles(dataDir,OnlyForTesting);
+TrainingDataMatrixes, NoOfTrainingDataSets = dataFunctions.openTraingsDataFiles(dataDir, OnlyForTesting);
 
 # =============================================================================
 #    Ckeck Selected Data
 # =============================================================================
-dataFunctions.plotSpectrogram(TraningDataMatrixes,1) #Plot Spectrogram of given Dataset
-dataFunctions.plotFrequenzyProfile(TraningDataMatrixes,1) #Plot Spectrogram of given Dataset
+dataFunctions.plotSpectrogram(TrainingDataMatrixes, 1) #Plot Spectrogram of given Dataset
+dataFunctions.plotFrequenzyProfile(TrainingDataMatrixes, 1) #Plot Spectrogram of given Dataset
 #(x1,x2,x3)=dataFunctions.test()
 
 # =============================================================================
@@ -54,11 +54,11 @@ NoOfUsedOutputSamples = 100;
 NoOfUsedOutputSignals = 2; #No of Outputsignals Can be 1 or 2 for Heartbeat and/or Respiration
 NoOfOutputSamples = NoOfUsedOutputSamples*NoOfUsedOutputSignals;        #No of Sampels used for Output Signal
 
-with tf.name_scope('Placeholders'):    
+with tf.name_scope('Placeholders'):
     x_in = tf.placeholder(tf.float32, [None,NoOfUsedInputSamples,NoOfUsedInputChannels],name='x_in') #Define Input Data Structure [batchSize, inputDim1, inputDim2]
     #y_outR = tf.placeholder(tf.float32, [None,NoOfOutputSamples,1]) #Define Output Data Structure for Respiration [batchSize, inputDim1, inputDim2]
     #y_outH = tf.placeholder(tf.float32, [None,NoOfOutputSamples,1]) #Define Output Data Structure for Hertbeat [batchSize, inputDim1, inputDim2]
-    y_Label = tf.placeholder(tf.float32, [None,NoOfOutputSamples,1],name='y_Label') #Define Output Data Structure for Hertbeat and Respiration[batchSize, inputDim1, inputDim2]    
+    y_Label = tf.placeholder(tf.float32, [None,NoOfOutputSamples,1],name='y_Label') #Define Output Data Structure for Hertbeat and Respiration[batchSize, inputDim1, inputDim2]
 
 
 with tf.name_scope("NeuralNetwork"):
@@ -82,7 +82,7 @@ gradW1 = tf.gradients(loss,W1)
 NormGradLoss = tf.linalg.global_norm(gradLoss)
 #
 ## create Session
-init = tf.global_variables_initializer() #Initalize Global Variables and Placeholders 
+init = tf.global_variables_initializer() #Initalize Global Variables and Placeholders
 
 if SaveSessionLog:
     merged = tf.summary.merge_all()
@@ -94,34 +94,34 @@ if SaveSessionLog:
     step = 0
 
 with tf.Session() as sess:
-    
+
     sess.run(init)
     for i_iteration in range(n_iterations):
-        
+
 #        for i_TrainDataSet in range(NoOfTrainingDataSets-1): #Get new Set of Training Data
             #Prepare Data
-            X_input_NN, Y_Label_NN, NoOfSamples, y_LabelR, y_LabelHB = dataFunctions.randomizeAllData(TraningDataMatrixes,NoOfTrainingDataSets,NoOfUsedInputSamples,NoOfOutputSamples,False)
-#            X_input_NN, Y_Label_NN, NoOfSamples, y_LabelR, y_LabelHB = dataFunctions.splitDataIntoTrainingExamples1D(TraningDataMatrixes[i_TrainDataSet]['Data'],NoOfUsedInputSamples,NoOfOutputSamples,False)
-            
+            X_input_NN, Y_Label_NN, NoOfSamples, y_LabelR, y_LabelHB = dataFunctions.randomizeAllData(TrainingDataMatrixes, NoOfTrainingDataSets, NoOfUsedInputSamples, NoOfOutputSamples, False)
+#            X_input_NN, Y_Label_NN, NoOfSamples, y_LabelR, y_LabelHB = dataFunctions.splitDataIntoTrainingExamples1D(TrainingDataMatrixes[i_TrainDataSet]['Data'],NoOfUsedInputSamples,NoOfOutputSamples,False)
+
             # get total number of differnt Batches. One Batch contains n samles of Training Data with Size batch_size to feed into the Netowrk
             i_Batches = dataFunctions.getNumberOfBatches(NoOfSamples,batch_size); #Total Number of different Batches
             Total_No_Batches = i_Batches;
-            
-            for i_Batches in range(i_Batches): 
+
+            for i_Batches in range(i_Batches):
                 #get next batch
                 X_input_Batch, Y_Label_Batch, y_LabelR_Batch, y_LabelHB_Batch = dataFunctions.nextBatch([X_input_NN, Y_Label_NN, y_LabelR, y_LabelHB],batch_size,Total_No_Batches,i_Batches)
-                #feed batch into NN    
+                #feed batch into NN
                 feed_dict_train = {x_in: X_input_Batch,y_Label:Y_Label_Batch};
                 #train the NN
                 out_data=sess.run([train], feed_dict=feed_dict_train);
-    
+
                 if i_Batches %10==0:
-                    
+
                     Loss, Ngrad = sess.run([loss ,NormGradLoss],feed_dict=feed_dict_train)
                     print('Iteration:',i_iteration,' Batch:',i_Batches,' Loss:',Loss,' NormGrad:',Ngrad)
-                    
+
                     if SaveSessionLog:
-                        
+
                         summary_str = RMSE_summary.eval(feed_dict=feed_dict_train)
                         summary_grad = NormGradient_summary.eval(feed_dict=feed_dict_train)
                         summary_gradW1 = sess.run(gradW1,feed_dict=feed_dict_train)
@@ -129,44 +129,44 @@ with tf.Session() as sess:
 #                        fig1 = plt.figure()
 #                        plt.imshow(np.squeeze(np.array(summary_gradW1)),[])
 #                        plt.show()
-                        
+
                         step=step+1
                         writer.add_summary(summary_str, step)
                         writer.add_summary(summary_grad, step)
-                 
-                if i_Batches %200==0:    
-                        
+
+                if i_Batches %200==0:
+
                     pr=sess.run([y_outHR], feed_dict=feed_dict_train);
                     pre=np.array(pr)
                     pre=np.squeeze(pre)
                     y_pre = pre.reshape(pre.shape[0],100,2)
-                    
+
                     Y_Label_Test = Y_Label_Batch.reshape(Y_Label_Batch.shape[0],100,2)
-                    
+
                     figPred = plt.figure()
                     plt.plot(y_pre[0,:,0])
                     plt.plot(Y_Label_Test[0,:,0])
                     plt.show()
-                    
+
                     figPred = plt.figure()
                     plt.plot(y_pre[0,:,1])
                     plt.plot(Y_Label_Test[0,:,1])
                     plt.show()
-                    
-                    
+
+
 #                    Y_Label_Test = Y_Label_Batch.reshape(30,100,2)
 #                    figPred = plt.figure()
 #                    plt.plot(Y_Label_Test[0,:,0])
 #                    plt.show()
-    
+
     if SaveSessionLog:
         writer.add_graph(sess.graph)
 
-if SaveSessionLog:    
+if SaveSessionLog:
     tensorboardString = "tensorboard --logdir='/Users/sebastianfriedrich/Documents/Hochschule Trier/Module/Masterprojekt (LAROS)/Python/" + "logs/train/"+TimeStamp + "'"
     pathString = "/Users/sebastianfriedrich/Documents/Hochschule Trier/Module/Masterprojekt (LAROS)/Python/" + "logs/train/"+TimeStamp + "/tensorboard.txt"
-    print('') 
-    print('!!!! Tensorboard comand for terminal:')       
+    print('')
+    print('!!!! Tensorboard comand for terminal:')
     print(tensorboardString)
     textFile = open(pathString,"w+")
     textFile.write(tensorboardString)
